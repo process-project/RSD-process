@@ -3,8 +3,8 @@ import requests_mock
 import requests
 import pytest
 import glob
-
-from tests.helpers import get_mock, isValidHTML
+from tests.helpers import get_mock, isValidHTML, is_live
+from urllib.error import HTTPError
 
 
 @pytest.fixture(autouse=True)
@@ -32,16 +32,22 @@ def test_fixtures_render(get, slug):
         assert status_code == 200
         assert isValidHTML(data)
 
+
 live_software_items = []
-if pytest.config.getoption("live"):
+if is_live:
     result = requests.get(api_url + '/software?isPublished=True').json()
     for item in result:
         live_software_items.append(item['slug'])
 
-@pytest.mark.skipif(not pytest.config.getoption("live"), reason="--live not specified")
+
+@pytest.mark.skipif(not is_live, reason="--live not specified")
 @pytest.mark.parametrize("slug", live_software_items)
 def test_live_software_data_renders(get, slug):
-    data, status_code = get('/software/%s' % slug)
+    try:
+        data, status_code = get('/software/%s' % slug)
+    except Exception as e:
+        pytest.skip(str(e))
+        return
     assert status_code == 200
     assert isValidHTML(data)
 
