@@ -3,7 +3,15 @@ import os
 import logging
 from datetime import datetime
 import requests
-from releases import ReleaseScraper
+from requests.exceptions import HTTPError
+import time
+import pymongo
+
+db = pymongo.MongoClient(host=os.environ.get('DATABASE_HOST'),
+                         port=int(os.environ.get('DATABASE_PORT')),
+                         connectTimeoutMS=100,
+                         serverSelectionTimeoutMS=100
+                         )[os.environ.get('DATABASE_NAME')]
 
 logger = logging.getLogger(__name__)
 
@@ -29,68 +37,105 @@ def list_records(dois):
 
         return root_elem
 
-    logger.info("Still need to enrich and correct the metadata. Currectly serving Zenodo's metadata as-is.")
+    def get_redirect():
+        response = requests.head('https://doi.org/{conceptdoi}'.format(conceptdoi=software["conceptDOI"]), headers=headers)
+        if response.status_code == 302:
+            return response.next.url
+        elif response.status_code == 429:
+            response.raise_for_status()
+        else:
+            raise HTTPError("Expected a redirect from doi.org to zenodo.org, got {0} instead."
+                            .format(response.status_code))
 
-    if dois is None:
-        # get the conceptdois from /api/software
-        response = requests.get(os.environ.get('BACKEND_URL') + '/software')
-        conceptdois = [software["conceptDOI"] for software in response.json() if software["isPublished"]]
-    else:
-        conceptdois = []
-        for doi in dois:
-            release = ReleaseScraper(doi)
-            if release.doi is not None and release.is_zenodo_doi() and release.is_concept_doi():
-                conceptdois.append(doi)
-                logger.info('{0}: {1}'.format(doi, 'doi is a Zenodo conceptdoi'))
-            else:
-                logger.error('{0}: {1}'.format(doi, release.message))
+    def get_zenodo_identifier():
+        response = requests.head(redirect_url, headers=headers)
+        if response.status_code == 302:
+            return response.next.url.split('/')[-1:][0]
+        elif response.status_code == 429:
+            response.raise_for_status()
+        else:
+            raise HTTPError("Expected a redirect from a conceptdoi to a versioned doi, got {0} instead."
+                            .format(response.status_code))
 
-    # for each conceptdoi, get the datacite4 using Zenodo's OAI-PMH GetRecord
-    oaipmh_elem = build_oaipmh_elem()
+    def get_datacite():
+        response = requests.get(url, headers=headers)
+        if int(response.headers.get('x-ratelimit-remaining')) < 10:
+            # throttle requests
+            logger.info("Sleeping for 60 seconds to avoid HttpError 429")
+            time.sleep(60)
+        if response.status_code != requests.codes.ok:
+            response.raise_for_status()
 
-    n_conceptdois = len(conceptdois)
+        if os.path.isdir(oaipmh_cache_dir):
+            pass
+        else:
+            os.makedirs(oaipmh_cache_dir)
+
+        fname = os.path.join(oaipmh_cache_dir, 'record-' + identifier + '.xml')
+        with open(fname, 'w') as fid:
+            fid.write(response.text)
+        # future work: correct/expand the datacite4 representation with other data from the RSDjson
+        return Tree.fromstring(response.text) \
+            .find("{http://www.openarchives.org/OAI/2.0/}GetRecord") \
+            .find("{http://www.openarchives.org/OAI/2.0/}record")
 
     oaipmh_cache_dir = os.path.join(os.getcwd(), 'oaipmh-cache', 'datacite4')
 
-    if os.path.isdir(oaipmh_cache_dir):
-        pass
+    oaipmh_elem = build_oaipmh_elem()
+
+    logger.info("Still need to enrich and correct the metadata. Currectly serving Zenodo's metadata as-is.")
+
+    # get the conceptdois from /api/software
+    response = requests.get(os.environ.get('BACKEND_URL') + '/software?isPublished=true&sort=conceptDOI')
+
+    if dois is None:
+        softwares = response.json()
     else:
-        os.makedirs(oaipmh_cache_dir)
+        softwares = [software for software in response.json() if software["conceptDOI"] in dois]
 
-    for i_conceptdoi, conceptdoi in enumerate(conceptdois):
+    headers = {
+        'Authorization': 'Bearer ' + os.environ.get('ZENODO_ACCESS_TOKEN')
+    }
 
-        if conceptdoi is None:
-            logger.warning(" %d/%d: conceptDOI is None" % (i_conceptdoi + 1, n_conceptdois))
+    n_softwares = len(softwares)
+
+    for i_software, software in enumerate(softwares):
+
+        if software["conceptDOI"] is None:
+            logger.warning(" %d/%d: conceptDOI is None" % (i_software + 1, n_softwares))
             continue
 
         try:
-            logger.info(" %d/%d: retrieving datacite4 metadata for %s" % (i_conceptdoi + 1, n_conceptdois, conceptdoi))
-
-            response = requests.get('https://doi.org/{conceptdoi}'.format(conceptdoi=conceptdoi))
-            if response.status_code != requests.codes.ok:
-                response.raise_for_status()
-            identifier = response.url.split('/')[-1:][0]
-
+            redirect_url = get_redirect()
+            identifier = get_zenodo_identifier()
             url = 'https://zenodo.org/oai2d?verb=GetRecord&identifier=oai:zenodo.org:' + identifier +\
                   '&metadataPrefix=datacite4'
-            response = requests.get(url)
-            if response.status_code != requests.codes.ok:
-                response.raise_for_status()
-
-            fname = os.path.join(oaipmh_cache_dir, 'record-' + identifier + '.xml')
-            with open(fname, 'w') as fid:
-                fid.write(response.text)
-
-            # future work: correct/expand the datacite4 representation with other data from the RSDjson
-            record_elem = Tree.fromstring(response.text)\
-                .find("{http://www.openarchives.org/OAI/2.0/}GetRecord")\
-                .find("{http://www.openarchives.org/OAI/2.0/}record")
-
+            record_elem = get_datacite()
             oaipmh_elem.find('{http://www.openarchives.org/OAI/2.0/}ListRecords')\
                 .append(record_elem)
 
-        except requests.exceptions.RequestException:
-            logger.warning("There was an error with " + conceptdoi)
+            logger.info(" %d/%d: retrieved datacite4 metadata for %s" % (i_software + 1, n_softwares, software["conceptDOI"]))
+
+            d = dict(id=software["primaryKey"]["id"],
+                     collection="software",
+                     metadata="OK")
+
+            db.logging.find_one_and_update({"id": d["id"], "collection": d["collection"]},
+                                           {"$set": d},
+                                           upsert=True)
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(" %d/%d: There was an error while retrieving OAI-PMH metadata for https://doi.org/%s. %s" %
+                          (i_software + 1, n_softwares, software["conceptDOI"], str(e)))
+
+            d = dict(id=software["primaryKey"]["id"],
+                     collection="software",
+                     metadata=str(e))
+
+            db.logging.find_one_and_update({"id": d["id"], "collection": d["collection"]},
+                                           {"$set": d},
+                                           upsert=True)
+            continue
 
     document = Tree.ElementTree(oaipmh_elem)
 
