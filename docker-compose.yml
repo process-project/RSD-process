@@ -210,3 +210,5 @@ volumes:
   static_admin:
   static_frontend:
   static_graphs:
+  static_schedule:
+
