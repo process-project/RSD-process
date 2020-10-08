@@ -48,6 +48,7 @@
     "required": [
         "createdAt",
         "familyNames",
+        "givenNames",
         "primaryKey",
         "updatedAt"
     ],
