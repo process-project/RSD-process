@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 import re
 import os
+import time
 
 import requests
 from cffconvert import Citation
@@ -20,7 +21,7 @@ class ReleaseScraper:
         5. on github, check if there is a cff
         foreach cff
         6. validate the cff
-        7. generate bibtex, ris, endnote, and codemeta strings
+        7. generate bibtex, ris, endnote, and schema.org strings
 
     After initialization, the ReleaseScraper instance has a field .releases which is
     an array of objects with one of the following layouts:
@@ -31,7 +32,7 @@ class ReleaseScraper:
         "files": {
             "bibtex": "file contents",
             "cff": "file contents",
-            "codemeta": "file contents",
+            "schema_dot_org": "file contents",
             "endnote": "file contents",
             "ris": "file contents"
         },
@@ -48,7 +49,7 @@ class ReleaseScraper:
     """
 
     def __init__(self, doi):
-        self.latest_codemeta = None
+        self.latest_schema_dot_org = None
         self.releases = list()
         self.is_citable = False
         self.zenodo_data = dict(conceptdoi=None, versioned_dois=None)
@@ -69,11 +70,12 @@ class ReleaseScraper:
             return
 
         url = "https://doi.org/{0}".format(doi)
-        if requests.get(url).status_code == requests.codes.ok:
+        response = requests.get(url)
+        if response.status_code == requests.codes.ok:
             self.is_citable = True
             self.doi = doi
         else:
-            self.message = "error resolving doi."
+            self.message = "error {0} resolving doi.".format(response.status_code)
             return
 
         if not self.is_zenodo_doi():
@@ -96,13 +98,13 @@ class ReleaseScraper:
         if True not in [release["citability"] == "full" for release in self.releases]:
             self.message = "no valid CITATION.cff found in any release."
             return
-        self.determine_latest_codemeta()
+        self.determine_latest_schema_dot_org()
         self.message = "OK"
 
-    def determine_latest_codemeta(self):
+    def determine_latest_schema_dot_org(self):
         for release in self.releases:
-            if "codemeta" in release["files"].keys():
-                self.latest_codemeta = release["files"]["codemeta"]
+            if "schema_dot_org" in release["files"].keys():
+                self.latest_schema_dot_org = release["files"]["schema_dot_org"]
                 return self
 
     def filter_zenodo_data_versioned_dois(self):
@@ -144,14 +146,26 @@ class ReleaseScraper:
     def fetch_zenodo_data_conceptdoi(self):
         zenodo_id = self.doi.replace("10.5281/zenodo.", "")
         url = "https://zenodo.org/api/records/" + zenodo_id
-        r = requests.get(url)
+        headers = {
+            'Authorization': 'Bearer ' + os.environ.get('ZENODO_ACCESS_TOKEN')
+        }
+        r = requests.get(url, headers=headers)
+        if int(r.headers.get('x-ratelimit-remaining')) < 10:
+            # throttle requests
+            time.sleep(60)
         r.raise_for_status()
         self.zenodo_data["conceptdoi"] = r.json()
         return self
 
     def fetch_zenodo_data_versioned_dois(self):
         url = "https://zenodo.org/api/records?q=conceptdoi:\"{0}\"&all_versions=true&size=100".format(self.doi)
-        r = requests.get(url)
+        headers = {
+            'Authorization': 'Bearer ' + os.environ.get('ZENODO_ACCESS_TOKEN')
+        }
+        r = requests.get(url, headers=headers)
+        if int(r.headers.get('x-ratelimit-remaining')) < 10:
+            # throttle requests
+            time.sleep(60)
         r.raise_for_status()
         self.zenodo_data["versioned_dois"] = r.json()
         hits = self.zenodo_data["versioned_dois"]["hits"]["hits"]
@@ -172,8 +186,9 @@ class ReleaseScraper:
                 try:
                     release["files"] = dict({
                         "bibtex": citation.as_bibtex(),
-                        "cff": citation.cffstr,
                         "codemeta": citation.as_codemeta(),
+                        "cff": citation.cffstr,
+                        "schema_dot_org": citation.as_schema_dot_org(),
                         "endnote": citation.as_enw(),
                         "ris": citation.as_ris()
                     })
@@ -205,28 +220,41 @@ class ReleaseScraper:
 
 def get_citations(db, dois):
 
-    if dois is None:
-        # get the conceptdois from /api/software
-        response = requests.get(os.environ.get('BACKEND_URL') + '/software')
-        dois = [software["conceptDOI"] for software in response.json() if software["isPublished"]]
+    # get the conceptdois from /api/software
+    response = requests.get(os.environ.get('BACKEND_URL') + '/software?isPublished=true&sort=conceptDOI')
 
-    n_dois = len(dois)
+    if dois is None:
+        softwares = response.json()
+    else:
+        softwares = [software for software in response.json() if software["conceptDOI"] in dois]
+
+    n_softwares = len(softwares)
     db.release.create_index([("conceptDOI", 1)])
-    dois.sort()
-    for i_doi, doi in enumerate(dois):
-        release = ReleaseScraper(doi)
+
+    for i_software, software in enumerate(softwares):
+        release = ReleaseScraper(software["conceptDOI"])
         if release.is_citable:
             document = {
-                "_id": doi,
+                "_id": software["conceptDOI"],
                 "isCitable": release.is_citable,
-                "conceptDOI": doi,
-                "latestCodemeta": "" if release.latest_codemeta is None else release.latest_codemeta,
+                "conceptDOI": software["conceptDOI"],
+                "latestSchema_dot_org": "" if release.latest_schema_dot_org is None else release.latest_schema_dot_org,
                 "releases": release.releases,
                 "createdAt": datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
             }
             db.release.find_one_and_update({"_id": document["conceptDOI"]}, {"$set": document}, upsert=True)
 
         if release.message == "OK":
-            logger.info("{0}/{1} \"{2}\" ({3}): {4}".format(i_doi + 1, n_dois, doi, release.title, release.message))
+            logger.info("{0}/{1} \"{2}\" ({3}): {4}".format(i_software + 1, n_softwares, software["conceptDOI"],
+                                                            release.title, release.message))
         else:
-            logger.error('{0}/{1}: {2} {3}'.format(i_doi + 1, n_dois, doi, release.message))
+            logger.error('{0}/{1}: {2} {3}'.format(i_software + 1, n_softwares, software["conceptDOI"],
+                                                   release.message))
+
+        d = dict(id=software["primaryKey"]["id"],
+                 collection="software",
+                 releases=release.message)
+
+        db.logging.find_one_and_update({"id": d["id"], "collection": d["collection"]},
+                                       {"$set": d},
+                                       upsert=True)
