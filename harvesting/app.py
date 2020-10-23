@@ -7,7 +7,7 @@ from releases import get_citations
 from github import sync_all as get_commits
 from zotero import get_mentions
 from oaipmh import list_records
-from cache_software import cache_software
+from cache import cache_software, cache_projects
 
 
 class MaxLevel(object):
@@ -52,15 +52,21 @@ def harvest_commits():
     get_commits()
 
 
-@harvest_group.command('mentions', help='Harvest mentions from Zotero library ' + os.environ.get('ZOTERO_LIBRARY', '<not specified>'))
-@click.option('--since-version', 'since_version', type=int, help='Retrieve Zotero items starting from this version regardless of what the local latest version is. For example, \'--since-version 4835\'.')
-@click.option('--keys', 'keys', type=str, help='Retrieve Zotero items matching the supplied comma-separated string. For example, \'--keys DQYQKKZ4,GZJ5CEKK\'')
+@harvest_group.command('mentions', help='Harvest mentions from Zotero library ' +
+                                        os.environ.get('ZOTERO_LIBRARY', '<not specified>'))
+@click.option('--since-version', 'since_version', type=int, help='Retrieve Zotero items starting from this version ' +
+                                                                 'regardless of what the local latest version is. ' +
+                                                                 'For example, \'--since-version 4835\'.')
+@click.option('--keys', 'keys', type=str, help='Retrieve Zotero items matching the supplied comma-separated string.' +
+                                               'For example, \'--keys DQYQKKZ4,GZJ5CEKK\'')
 def harvest_mentions(since_version=None, keys=None):
     get_mentions(since_version=since_version, keys=keys)
 
 
 @harvest_group.command('citations', help='Harvest citation metadata using Zenodo, GitHub, and CITATION.cff files')
-@click.option('--dois', 'dois', type=str, help='Harvest only citation metadata associated with the supplied comma-separated string of DOIs. For example, \'--dois 10.5281/zenodo.2609141,10.5281/zenodo.1162057\'')
+@click.option('--dois', 'dois', type=str, help='Harvest only citation metadata associated with the supplied ' +
+                                               'comma-separated string of DOIs. For example, \'--dois 10.5281/' +
+                                               'zenodo.2609141,10.5281/zenodo.1162057\'')
 def harvest_citations(dois=None):
     if dois is None:
         pass
@@ -70,8 +76,10 @@ def harvest_citations(dois=None):
     get_citations(db, dois)
 
 
-@harvest_group.command('metadata', help='Harvest datacite4 metadata from Zenodo')
-@click.option('--dois', 'dois', type=str, help='Harvest only metadata associated with the supplied comma-separated string of DOIs. For example, \'--dois 10.5281/zenodo.2609141,10.5281/zenodo.1162057\'')
+@harvest_group.command('metadata', help='Harvest datacite4 metadata from Zenodo for dissemination via OAI-PMH')
+@click.option('--dois', 'dois', type=str, help='Harvest only metadata associated with the supplied comma-separated ' +
+                                               'string of DOIs. For example, \'--dois 10.5281/zenodo.2609141,10.5281' +
+                                               '/zenodo.1162057\'')
 def harvest_metadata(dois=None):
     if dois is None:
         pass
@@ -82,7 +90,7 @@ def harvest_metadata(dois=None):
 
 @harvest_group.command('all')
 def harvest_all():
-    """Harvest commits, citations, mentions, projects"""
+    """Harvest commits, citations, mentions, metadata"""
     db = db_connect()
     dois = None
     get_commits()
@@ -91,13 +99,34 @@ def harvest_all():
     list_records(dois)
 
 
-@cli.command('resolve')
-def resolve():
-    """Combine information from different collections
-    into one document by resolving foreign keys"""
+@cli.group('resolve')
+def resolve_group():
+    """Resolve data from a variety of sources"""
+    pass
+
+
+@resolve_group.command('all')
+def resolve_all():
+    """Combine information from different collections into one document
+    by resolving all foreign keys in any project document and any software
+    document"""
+    cache_projects()
+    cache_software()
+
+
+@resolve_group.command('projects')
+def resolve_projects():
+    """Combine information from different collections into one document
+    by resolving all foreign keys in any project document"""
+    cache_projects()
+
+
+@resolve_group.command('software')
+def resolve_software():
+    """Combine information from different collections into one document
+    by resolving all foreign keys in any software document"""
     cache_software()
 
 
 if __name__ == '__main__':
-    db = db_connect()
     cli()

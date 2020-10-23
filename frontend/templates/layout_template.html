@@ -2,46 +2,43 @@
 <html lang="en">
     <head>
         {%- block head -%}
-            <meta charset="UTF-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <meta name="robots" content="INDEX,FOLLOW" />
-            <link rel="shortcut icon" href="/static/favicon.ico"/>
-            <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style/rsd.scss.css')}}">
-            <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
-            <!-- "fork me on github" style sheet: -->
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.2/gh-fork-ribbon.min.css" />
-            <!-- Global site tag (gtag.js) - Google Analytics -->
-            <script async src="https://www.googletagmanager.com/gtag/js?id=UA-111275282-1"></script>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="INDEX,FOLLOW" />
+        <link rel="shortcut icon" href="/static/favicon.ico"/>
+        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style/rsd.scss.css')}}">
+        <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-111275282-1"></script>
         {%- endblock -%}
     </head>
 
     <body>
         <svg style="position: absolute; width: 0; height: 0; overflow: hidden;"><use href="{{url_for('static', filename='icons/icons.svg')}}"></use></svg>
-        
-        <a class="github-fork-ribbon right-top"
-           href="https://github.com/research-software-directory/research-software-directory/"
-           data-ribbon="Fork me on GitHub"
-           title="Fork me on GitHub">Fork me on GitHub</a>
 
         <div id="layout_container">
             <header id="header">
                 <div class="container">
                     
-                    <div id="header_logo">
+                    <div id="header_left">
+                        {% block corporate_home %}
                         <a href="https://www.process-project.eu">
-                            <img src="https://www.process-project.eu/wp-content/uploads/2018/03/PROCESS_LOGO-e1521828071145.png" \>
+                            <img src="https://www.process-project.eu/wp-content/uploads/2020/02/process-logo-1.png" \>
                         </a>
-                    </div>
-
-                    <div id="header_links">
+                        {% endblock %}
                         {% block find_software %}
                         <a href="/">Search the directory</a>
                         {% endblock %}
+                    </div>
+
+                    <div id="header_right">
                         {% block about_rsd %}
                         <a href="/about">About</a>
                         {% endblock %}
+
                     </div>
+
                 </div>
                 <div class="container">
                     <div class="divider"></div>    

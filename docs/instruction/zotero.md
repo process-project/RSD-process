@@ -31,13 +31,12 @@ Make sure the item you want to add has some sort of identifier such as a DOI or
 a URL; without it, whatever you're adding is just hearsay.
 
 1. Synchronize with the Zotero server.
-1. On the right-hand side, select the folder that you want to add an item to. Refer
-to [this table](projects.md) to find the right project number.
+1. On the right-hand side, select the ``Miscellaneous`` folder (or, you could try to find a more appropriate folder, but know that that won't matter for anything related to the Research Software Directory -- it does not use the folder structure from Zotero, just the items that are in it).
 1. Click the `Add by identifier` button.
 
     ![add-by-identifier](/docs/images/zotero-add-by-identifier.png)
 
-    Fill in your item's DOI.
+    Fill in your item's DOI, e.g. ``10.5281/zenodo.1299523``
 
 1. Wait, you're not done yet! Verify that the metadata in the `Info` tab is
 correct, as follows:
@@ -47,7 +46,7 @@ correct, as follows:
    1. Verify that any names have been entered correctly, for instance in the `Author` or
    `Programmer` fields. We are using the `firstname`, `lastname` format, where each
    is in its own input field. You can switch between single and two field entry by
-   pressing the small button next to the names. Prefixes (`de`, `van der`, etc.)
+   pressing the small button next to the names. Name particles (`de`, `van der`, etc.)
    should be included in the lastname so for `Jan de Groot` use lastname `de
    Groot`.
    1. Verify that the dates have been entered correctly. Use a single date (don't
@@ -64,7 +63,7 @@ metadata required. By default Zotero shows a much larger list of metadata,
 please fill out the others entries as good as possible.
 
 If you have an item that doesn't fit, please [open an issue
-here](https://github.com/research-software-directory/issues) and we'll figure it
+here](https://github.com/research-software-directory/research-software-directory/issues) and we'll figure it
 out & update this document.
 
 ## Papers
@@ -92,9 +91,6 @@ Datasets will be a new feature in an upcoming Zotero release. For now, set
 If you don't have a DOI for the dataset yet, make sure to [upload a copy of the item
 to Zenodo](https://zenodo.org/deposit/new), FigShare or an other place that provides a DOI. The item's URL should
 point to https://doi.org &lt;yourdoi&gt;.
-In order to distinguish dataset items from
-regular journal articles, the following should be added on a
-separate line into the `Extra` field: `itemType: Dataset`.
 
 ## Conference poster or presentation slides
 
@@ -108,11 +104,6 @@ purpose (e.g. https://doi.org &lt;yourdoi&gt;).
 
 Use `Item Type` `Presentation`, set the field `Type` to `Workshop`, `Lecture`,
 or `Demonstration`.
-
-## Manuscript
-
-These are peer reviewed publications in submission, under review, or in preparation.
-Use `Item Type` `Manuscript`.
 
 ## Report
 
@@ -130,7 +121,7 @@ A PhD, Master, or Bachelor thesis. Set `Item Type` to `Thesis` and fill in
 
 Please choose the most appropriate type from `Blogpost`, `Book`, `Book Section`,
 `Interview`, `Magazine Article`, `Newspaper Article`, `Podcast`, `Radio
-Broadcast`, `TV Broadcast`, `Video Recording`, `Webpage`. And make a best-effort
+Broadcast`, `TV Broadcast`, `Video Recording`, `Webpage`. And make a best effort
 at filling out the other metadata on the `Info` tab.
 
 

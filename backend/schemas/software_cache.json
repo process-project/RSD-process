@@ -162,6 +162,9 @@
                                 },
                                 "ris": {
                                     "type": "string"
+                                },
+                                "schema_dot_org": {
+                                    "type": "string"
                                 }
                             },
                             "required": [
