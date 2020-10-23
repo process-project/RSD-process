@@ -25,64 +25,9 @@ authors:
     affiliation: "Netherlands eScience Center"
     family-names: Pawar
     given-names: Pushpanjali
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Hage
-    given-names: Willem
-    name-particle: van
-    orcid: "https://orcid.org/0000-0002-6478-3003"
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Ridder
-    given-names: Lars
-    orcid: "https://orcid.org/0000-0002-7635-9533"
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Kulik
-    given-names: Lode
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Bakker
-    given-names: Tom
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Hees
-    given-names: Vincent
-    name-particle: van
-    orcid: "https://orcid.org/0000-0003-0182-9008"
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Bogaardt
-    given-names: Laurens
-    orcid: "https://orcid.org/0000-0002-7712-6627"
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Mendrik
-    given-names: Adriënne
-    orcid: "https://orcid.org/0000-0001-6631-7068"
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Es
-    given-names: Bram
-    name-particle: van
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Attema
-    given-names: Jisk
-    orcid: "https://orcid.org/0000-0002-0948-1176"
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Ranguelova
-    given-names: Elena
-  - 
-    affiliation: "Netherlands eScience Center"
-    family-names: Nieuwpoort
-    given-names: Rob
-    name-particle: van
-    orcid: "https://orcid.org/0000-0002-2947-9444"
-cff-version: "1.0.3"
-date-released: 2020-06-04
-doi: 10.5281/zenodo.1154130
+cff-version: "1.1.0"
+date-released: 2020-10-23
+doi: 10.0000/FIXME
 keywords: 
   - "Current Research Information Systems"
   - "FAIR for software"
@@ -93,6 +38,6 @@ keywords:
   - RSE
 license: Apache-2.0
 message: "If you use this software, please cite it using these metadata."
-repository-code: "https://github.com/research-software-directory/research-software-directory"
+repository-code: "https://github.com/process-project/research-software-directory"
 title: "Research Software Directory"
-version: "2.0.2"
+version: "1.0.0"
