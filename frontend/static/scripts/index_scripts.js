@@ -123,10 +123,8 @@ function initOverview(softwareData, organizationsData) {
                 "Compute services",
                 "Service orchestration",
                 "User interfaces",
-                "Validation",
                 "Image processing",
                 "Machine learning",
-                "Multi-scale & multi model simulations",
                 "Visualization",
                 "Workflow technologies"
             ],
